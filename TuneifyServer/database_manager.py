@@ -97,9 +97,13 @@ class DatabaseManager:
             return f"ERROR|{str(e)}"
 
     def get_user_playlists(self, user_id):
-        self.cursor.execute("SELECT id, name FROM playlists WHERE user_id=?", (user_id,))
+        # Added user_id to the SELECT
+        self.cursor.execute("SELECT id, name, user_id FROM playlists WHERE user_id=?", (user_id,))
         rows = self.cursor.fetchall()
-        playlists = [{"id": r[0], "name": r[1]} for r in rows]
+
+        # Matching the keys to what Kotlin expects: "id", "name", "user_id"
+        playlists = [{"id": r[0], "name": r[1], "user_id": r[2]} for r in rows]
+
         return f"OK|{json.dumps(playlists)}"
 
     def update_playlist_name(self, playlist_id, new_name):
@@ -119,6 +123,18 @@ class DatabaseManager:
                 self.cursor.execute("INSERT INTO playlist_songs (playlist_id, song_id) VALUES (?, ?)", (playlist_id, s_id))
             self.conn.commit()
             return "OK|Songs added"
+        except Exception as e:
+            return f"ERROR|{str(e)}"
+
+    def add_single_song_to_playlist(self, playlist_id, song_id):
+        """Adds exactly one song to a playlist. Used by the Search Page popup."""
+        try:
+            self.cursor.execute(
+                "INSERT INTO playlist_songs (playlist_id, song_id) VALUES (?, ?)",
+                (playlist_id, song_id)
+            )
+            self.conn.commit()
+            return "OK|Song added"
         except Exception as e:
             return f"ERROR|{str(e)}"
 

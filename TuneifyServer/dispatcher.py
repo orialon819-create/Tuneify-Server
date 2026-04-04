@@ -74,6 +74,30 @@ class Dispatcher:
                 return "ERROR|Server Error"
 
         # ---------- PLAYLIST COMMANDS ----------
+
+        # Inside your server's command handler
+        elif command == "GET_USER_PLAYLISTS":
+            # 1. Get the user_id sent from the Android app
+            user_id = params.get("user_id")
+
+            # 2. Call the playlist_service to get the data from the DB
+            # This calls the function we discussed earlier
+            return self.playlist_service.get_user_playlists(user_id)
+
+        elif command == "ADD_SONG_TO_PLAYLIST":
+            # This handles the actual 'Save' action from the popup
+            song_id = params.get("song_id")
+            playlist_id = params.get("playlist_id")
+            return self.playlist_service.add_single_song(playlist_id, song_id)
+
+        elif command == "ADD_SONG_TO_PLAYLIST":
+            # Android sends: params.put("song_id", song.id)
+            s_id = params.get("song_id")
+            p_id = params.get("playlist_id")
+
+            # We call the single song version
+            return self.playlist_service.add_single_song(p_id, s_id)
+
         elif command == "GET_PLAYLIST_SONGS":
             # FIX: Get playlist_id from params
             p_id = params.get("playlist_id")

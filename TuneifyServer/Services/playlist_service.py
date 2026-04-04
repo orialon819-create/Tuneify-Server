@@ -39,3 +39,6 @@ class PlaylistService:
     # Returns a list of song objects currently contained within a specific playlist
     def get_songs(self, playlist_id):
         return self.db.get_playlist_songs(playlist_id)
+
+    def add_single_song(self, playlist_id, song_id):
+        return self.db.add_single_song_to_playlist(playlist_id, song_id)
