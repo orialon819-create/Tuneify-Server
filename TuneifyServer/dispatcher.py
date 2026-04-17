@@ -75,6 +75,14 @@ class Dispatcher:
 
         # ---------- PLAYLIST COMMANDS ----------
 
+        # Inside your Dispatcher's handle_command method:
+        elif command == "UPDATE_PLAYLIST_COVER":
+            playlist_id = params.get("playlist_id")
+            filename = params.get("filename")
+
+            # Call the service to update the DB
+            return self.playlist_service.update_playlist_cover(playlist_id, filename)
+
         # Inside your server's command handler
         elif command == "GET_USER_PLAYLISTS":
             # 1. Get the user_id sent from the Android app
@@ -118,12 +126,11 @@ class Dispatcher:
                     new_playlist_id = int(result.split("|")[1])
                     # 2. Link the songs to that new ID
                     self.playlist_service.add_songs(new_playlist_id, song_ids)
-                    return "OK|Playlist created with songs"
+                    return f"OK|{new_playlist_id}"
                 except (IndexError, ValueError):
                     return "ERROR|Failed to parse new playlist ID"
 
-            return result # Return the error from create_playlist if it failed
-
+            return result
         # ---------- UNKNOWN ----------
         else:
             return "ERROR|Unknown command"

@@ -1,30 +1,28 @@
-# test_client.py
-import socket
+import sqlite3
 
-HOST = "127.0.0.1"
-PORT = 5000
+try:
+    # 1. Connect to the database
+    # Make sure the path "../tuneify.db" is correct relative to this script!
+    conn = sqlite3.connect("../tuneify.db")
+    cursor = conn.cursor()
 
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect((HOST, PORT))
+    # 2. Execute the first command (Playlists)
+    print("Adding cover_url to playlists...")
+    cursor.execute("ALTER TABLE playlists ADD COLUMN cover_url TEXT DEFAULT 'default_playlist.png';")
 
-# --- Test REGISTER ---
-client.sendall("REGISTER|Ilya|Rozanov|ilyaexample.com|ilyaR|password123".encode())
-response = client.recv(4096).decode()
-print("REGISTER response:", response)
+    # 3. Execute the second command (Songs)
+    print("Adding cover_url to songs...")
+    cursor.execute("ALTER TABLE songs ADD COLUMN cover_url TEXT DEFAULT 'default_song.png';")
 
-# --- Test LOGIN ---
-client.sendall("LOGIN|orialon|password123".encode())
-response = client.recv(4096).decode()
-print("LOGIN response:", response)
+    # 4. Commit the changes and close
+    conn.commit()
+    print("Database updated successfully!")
 
-# --- Test GET_USER ---
-client.sendall("GET_USER|orialon".encode())
-response = client.recv(4096).decode()
-print("GET_USER response:", response)
-
-# --- Test GET_ALL_SONGS ---
-client.sendall("GET_ALL_SONGS".encode())
-response = client.recv(4096).decode()
-print("ALL_SONGS response:", response)
-
-client.close()
+except sqlite3.OperationalError as e:
+    # This happens if the column already exists
+    print(f"Notice: {e}")
+except Exception as e:
+    print(f"An error occurred: {e}")
+finally:
+    if 'conn' in locals():
+        conn.close()

@@ -59,25 +59,37 @@ class DatabaseManager:
 
     # Fetches the entire song library as a JSON string for the Android UI
     def get_all_songs(self):
-        self.cursor.execute("SELECT id, title, artist, file_name, stream_url, mood, mood_score, lyrics FROM songs")
+        # Added cover_url to the end of the SELECT
+        self.cursor.execute("SELECT id, title, artist, file_name, stream_url, mood, mood_score, lyrics, cover_url FROM songs")
         rows = self.cursor.fetchall()
         songs_list = []
         for r in rows:
             songs_list.append({
                 "id": r[0], "title": r[1], "artist": r[2], "file_name": r[3],
-                "stream_url": r[4], "mood": r[5], "mood_score": r[6], "lyrics": r[7]
+                "stream_url": r[4], "mood": r[5], "mood_score": r[6], "lyrics": r[7],
+                "cover_url": r[8] # Add this line
             })
         return f"OK|{json.dumps(songs_list)}"
 
     def search_songs(self, query):
         like = f"%{query}%"
+        # Added 'cover_url' to the SELECT statement
         self.cursor.execute("""
-            SELECT id, title, artist FROM songs
+            SELECT id, title, artist, cover_url FROM songs
             WHERE title LIKE ? OR artist LIKE ?
         """, (like, like))
         results = self.cursor.fetchall()
+
         if results:
-            songs_list = [{"id": r[0], "title": r[1], "artist": r[2]} for r in results]
+            # Added r[3] to the dictionary
+            songs_list = [
+                {
+                    "id": r[0],
+                    "title": r[1],
+                    "artist": r[2],
+                    "cover_url": r[3]
+                } for r in results
+            ]
             return f"OK|{json.dumps(songs_list)}"
         return "ERROR|No songs found"
 
@@ -97,12 +109,12 @@ class DatabaseManager:
             return f"ERROR|{str(e)}"
 
     def get_user_playlists(self, user_id):
-        # Added user_id to the SELECT
-        self.cursor.execute("SELECT id, name, user_id FROM playlists WHERE user_id=?", (user_id,))
+        # Added cover_url to the SELECT
+        self.cursor.execute("SELECT id, name, user_id, cover_url FROM playlists WHERE user_id=?", (user_id,))
         rows = self.cursor.fetchall()
 
-        # Matching the keys to what Kotlin expects: "id", "name", "user_id"
-        playlists = [{"id": r[0], "name": r[1], "user_id": r[2]} for r in rows]
+        # Added "cover_url": r[3] to the dictionary
+        playlists = [{"id": r[0], "name": r[1], "user_id": r[2], "cover_url": r[3]} for r in rows]
 
         return f"OK|{json.dumps(playlists)}"
 
@@ -150,6 +162,16 @@ class DatabaseManager:
             songs = [{"id": r[0], "title": r[1], "artist": r[2]} for r in rows]
             return f"OK|{json.dumps(songs)}"
         return "ERROR|No songs in playlist"
+
+    def update_playlist_cover(self, playlist_id, filename):
+        """Updates the cover_url for a specific playlist."""
+        try:
+            self.cursor.execute("UPDATE playlists SET cover_url=? WHERE id=?", (filename, playlist_id))
+            self.conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error updating playlist cover: {e}")
+            return False
 
     def remove_song_from_playlist(self, playlist_id, song_id):
         self.cursor.execute("DELETE FROM playlist_songs WHERE playlist_id=? AND song_id=?", (playlist_id, song_id))
