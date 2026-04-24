@@ -106,11 +106,12 @@ class Dispatcher:
             # We call the single song version
             return self.playlist_service.add_single_song(p_id, s_id)
 
+
         elif command == "GET_PLAYLIST_SONGS":
-            # FIX: Get playlist_id from params
+
             p_id = params.get("playlist_id")
-            data = self.playlist_service.get_songs(p_id)
-            return f"OK|{json.dumps(data)}"
+
+            return self.playlist_service.get_songs(p_id)
 
         elif command == "CREATE_PLAYLIST":
             u_id = params.get("user_id")
