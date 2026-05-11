@@ -247,5 +247,69 @@ class DatabaseManager:
         finally:
             cursor.close()
 
+    def get_playlist_song_count(self, playlist_id):
+        """Returns how many songs are in a playlist as 'OK|N'."""
+        cursor = self.conn.cursor()
+        try:
+            cursor.execute(
+                "SELECT COUNT(*) FROM playlist_songs WHERE playlist_id=?",
+                (playlist_id,)
+            )
+            count = cursor.fetchone()[0]
+            return f"OK|{count}"
+        finally:
+            cursor.close()
+
+    def get_for_you_playlists(self, user_id):
+        cursor = self.conn.cursor()
+        try:
+            cursor.execute("""
+                SELECT id, name, cover_url FROM playlists
+                WHERE name IN ('Top Pop Hits', '80s Mix', 'Throwback Mix')
+            """)
+            rows = cursor.fetchall()
+
+            playlists = []
+            for r in rows:
+                playlists.append({
+                    "id": r[0],
+                    "name": r[1],
+                    "subtitle": "Recommended for you",
+                    "cover_url": r[2]
+                })
+
+            return f"OK|{json.dumps(playlists)}"
+        finally:
+            cursor.close()
+
+    def get_or_create_liked_songs_playlist(self, user_id):
+        cursor = self.conn.cursor()
+        try:
+            cursor.execute(
+                "SELECT id FROM playlists WHERE user_id=? AND name='Liked Songs'",
+                (user_id,)
+            )
+            row = cursor.fetchone()
+
+            if row:
+                return f"OK|{row[0]}"
+
+            # 👇 FIX: permanent cover for ALL users
+            cover_filename = "liked_songs_cover.png"
+
+            cursor.execute("""
+                INSERT INTO playlists (name, user_id, cover_url)
+                VALUES ('Liked Songs', ?, ?)
+            """, (user_id, cover_filename))
+
+            self.conn.commit()
+            return f"OK|{cursor.lastrowid}"
+
+        except Exception as e:
+            return f"ERROR|{e}"
+        finally:
+            cursor.close()
+
+
     def close(self):
         self.conn.close()
