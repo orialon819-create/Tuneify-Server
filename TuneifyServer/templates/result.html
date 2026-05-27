@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tuneify Admin - Result</title>
+    <style>
+        * { box-sizing:border-box; margin:0; padding:0; }
+        body {
+            font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background:linear-gradient(135deg,#1a0533 0%,#0f0121 100%);
+            min-height:100vh; color:#FFFFFF;
+            display:flex; justify-content:center; padding:40px 16px;
+        }
+        .container { width:100%; max-width:560px; }
+        .back { color:#AAAACC; text-decoration:none; font-size:14px;
+                display:inline-block; margin-bottom:24px; }
+        .back:hover { color:#FFFFFF; }
+        h1 { font-size:26px; margin-bottom:6px; }
+        .sub { color:#AAAACC; font-size:14px; margin-bottom:24px; }
+        .success-banner {
+            background:rgba(39,174,96,0.15); border:1px solid rgba(39,174,96,0.35);
+            border-radius:14px; padding:14px 18px;
+            color:#58D68D; font-size:14px; margin-bottom:20px;
+        }
+        .card {
+            background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12);
+            border-radius:20px; padding:24px; margin-bottom:16px;
+        }
+        .card h2 {
+            font-size:11px; color:#7C3AED; margin-bottom:16px;
+            letter-spacing:0.1em; text-transform:uppercase; font-weight:700;
+        }
+        .mood-display { text-align:center; padding:12px 0; }
+        .mood-emoji  { font-size:60px; display:block; margin-bottom:8px; }
+        .mood-name   { font-size:26px; font-weight:bold; }
+        .mood-conf   { font-size:14px; color:#AAAACC; margin-top:4px; }
+        .conf-bar-wrap {
+            background:rgba(255,255,255,0.08); border-radius:20px;
+            height:7px; margin-top:12px; overflow:hidden;
+        }
+        .conf-bar {
+            height:100%; border-radius:20px;
+            background:linear-gradient(90deg,#7C3AED,#C4B5FD);
+        }
+        /* All mood probabilities */
+        .prob-row {
+            display:flex; align-items:center; gap:10px;
+            padding:7px 0; border-top:1px solid rgba(255,255,255,0.06);
+        }
+        .prob-row:first-child { border-top:none; }
+        .prob-label { width:90px; font-size:13px; color:#AAAACC; }
+        .prob-bar-wrap {
+            flex:1; background:rgba(255,255,255,0.07);
+            border-radius:10px; height:6px; overflow:hidden;
+        }
+        .prob-bar { height:100%; border-radius:10px; background:#7C3AED; }
+        .prob-pct  { font-size:13px; color:#C4B5FD; width:44px; text-align:right; }
+        /* DB fields */
+        .field-row {
+            display:flex; justify-content:space-between;
+            align-items:flex-start; padding:9px 0;
+            border-top:1px solid rgba(255,255,255,0.07);
+            font-size:13px; gap:12px;
+        }
+        .field-row:first-child { border-top:none; }
+        .field-label { color:#AAAACC; flex-shrink:0; width:110px; }
+        .field-val   { color:#DDDDEE; word-break:break-all; }
+        /* Feature table */
+        .feat-row {
+            display:flex; justify-content:space-between;
+            padding:9px 0; border-top:1px solid rgba(255,255,255,0.07);
+        }
+        .feat-row:first-child { border-top:none; }
+        .feat-name { color:#AAAACC; font-size:13px; }
+        .feat-val  { color:#C4B5FD; font-size:14px; font-weight:600; }
+        /* Actions */
+        .actions { display:flex; gap:12px; margin-top:4px; }
+        .btn {
+            flex:1; padding:13px; border-radius:12px; border:none;
+            font-size:15px; font-weight:600; cursor:pointer;
+            text-align:center; text-decoration:none; display:block;
+        }
+        .btn-primary { background:#7C3AED; color:#FFF; }
+        .btn-outline {
+            background:transparent;
+            border:1px solid rgba(255,255,255,0.2); color:#AAAACC;
+        }
+        .btn:hover { opacity:0.85; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="{{ url_for('dashboard') }}" class="back">← Dashboard</a>
+        <h1>Song Added!</h1>
+        <p class="sub">ML analysis complete. Song saved to database.</p>
+
+        <div class="success-banner">
+            "{{ title }}" by {{ artist }} saved as ID #{{ song_id }}
+        </div>
+
+        <!-- Detected mood -->
+        <div class="card">
+            <h2>Detected Mood</h2>
+            <div class="mood-display">
+                <span class="mood-emoji">
+                    {% if mood=='Happy' %}😊
+                    {% elif mood=='Sad' %}😢
+                    {% elif mood=='Angry' %}😠
+                    {% elif mood=='Calm' %}😌
+                    {% elif mood=='Energetic' %}⚡
+                    {% else %}🎵{% endif %}
+                </span>
+                <div class="mood-name">{{ mood }}</div>
+                <div class="mood-conf">Confidence: {{ confidence }}%</div>
+                <div class="conf-bar-wrap">
+                    <div class="conf-bar" style="width:{{ confidence }}%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- All mood probabilities -->
+        {% if all_probs %}
+        <div class="card">
+            <h2>All Mood Probabilities</h2>
+            {% for m, pct in all_probs.items() | sort(attribute=1, reverse=True) %}
+            <div class="prob-row">
+                <span class="prob-label">
+                    {% if m=='Happy' %}😊{% elif m=='Sad' %}😢
+                    {% elif m=='Angry' %}😠{% elif m=='Calm' %}😌
+                    {% elif m=='Energetic' %}⚡{% endif %}
+                    {{ m }}
+                </span>
+                <div class="prob-bar-wrap">
+                    <div class="prob-bar" style="width:{{ pct }}%"></div>
+                </div>
+                <span class="prob-pct">{{ pct }}%</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Extracted features -->
+        <div class="card">
+            <h2>Extracted Audio Features</h2>
+            <div class="feat-row">
+                <span class="feat-name">🥁 Tempo (BPM)</span>
+                <span class="feat-val">{{ features.get('tempo', '—') }}</span>
+            </div>
+            <div class="feat-row">
+                <span class="feat-name">⚡ Energy (RMS)</span>
+                <span class="feat-val">{{ features.get('energy', '—') }}</span>
+            </div>
+            <div class="feat-row">
+                <span class="feat-name">🎼 Spectral Centroid</span>
+                <span class="feat-val">{{ features.get('centroid', '—') }} Hz</span>
+            </div>
+        </div>
+
+        <!-- All DB fields saved -->
+        <div class="card">
+            <h2>Saved to Database</h2>
+            <div class="field-row">
+                <span class="field-label">title</span>
+                <span class="field-val">{{ title }}</span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">artist</span>
+                <span class="field-val">{{ artist }}</span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">file_name</span>
+                <span class="field-val" style="color:#AAAACC">{{ file_name }}</span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">stream_url</span>
+                <span class="field-val" style="color:#AAAACC">{{ stream_url }}</span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">mood</span>
+                <span class="field-val">{{ mood }}</span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">mood_score</span>
+                <span class="field-val">{{ mood_score }}</span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">lyrics</span>
+                <span class="field-val" style="color:#888">
+                    {{ lyrics[:60] + "…" if lyrics and lyrics|length > 60 else (lyrics or "—") }}
+                </span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">cover_url</span>
+                <span class="field-val" style="color:#AAAACC">{{ cover_url or "—" }}</span>
+            </div>
+        </div>
+
+        <div class="actions">
+            <a href="{{ url_for('upload') }}" class="btn btn-primary">+ Upload Another</a>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-outline">Dashboard</a>
+        </div>
+    </div>
+</body>
+</html>

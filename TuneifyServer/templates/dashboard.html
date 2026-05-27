@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tuneify Admin — Dashboard</title>
+    <style>
+        * { box-sizing:border-box; margin:0; padding:0; }
+        body {
+            font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background:linear-gradient(135deg,#1a0533 0%,#0f0121 100%);
+            min-height:100vh; color:#FFFFFF; padding:32px;
+        }
+        header {
+            display:flex; justify-content:space-between;
+            align-items:center; margin-bottom:28px;
+        }
+        h1 { font-size:26px; }
+        .btn {
+            padding:10px 20px; border-radius:10px; border:none;
+            cursor:pointer; font-size:14px; font-weight:600;
+            text-decoration:none; display:inline-block;
+        }
+        .btn-primary { background:#7C3AED; color:#FFF; }
+        .btn-outline { background:transparent; border:1px solid rgba(255,255,255,0.2); color:#AAAACC; }
+        .btn:hover { opacity:0.85; }
+        .success {
+            background:rgba(39,174,96,0.15); border:1px solid rgba(39,174,96,0.3);
+            color:#58D68D; padding:12px 18px; border-radius:12px;
+            margin-bottom:20px; font-size:14px;
+        }
+        .stats { display:flex; gap:14px; margin-bottom:28px; flex-wrap:wrap; }
+        .stat {
+            background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1);
+            border-radius:14px; padding:16px 22px; flex:1; min-width:100px;
+        }
+        .stat .num { font-size:28px; font-weight:bold; color:#C4B5FD; }
+        .stat .lbl { font-size:12px; color:#AAAACC; margin-top:3px; }
+        .table-wrap { overflow-x:auto; }
+        table { width:100%; border-collapse:collapse; min-width:800px; }
+        th {
+            background:rgba(255,255,255,0.08); padding:10px 14px;
+            text-align:left; font-size:11px; letter-spacing:0.08em;
+            color:#AAAACC; text-transform:uppercase; white-space:nowrap;
+        }
+        td {
+            padding:10px 14px; border-top:1px solid rgba(255,255,255,0.06);
+            font-size:13px; color:#DDDDEE; vertical-align:middle;
+        }
+        .mood-badge {
+            display:inline-block; padding:3px 10px;
+            border-radius:20px; font-size:12px; font-weight:600;
+        }
+        .mood-Happy     { background:#E67E2233; color:#F39C12; }
+        .mood-Sad       { background:#2980B933; color:#5DADE2; }
+        .mood-Angry     { background:#C0392B33; color:#EC7063; }
+        .mood-Calm      { background:#27AE6033; color:#58D68D; }
+        .mood-Energetic { background:#8E44AD33; color:#C39BD3; }
+        .mood-Unknown   { background:#33333333; color:#AAAAAA; }
+        .delete-btn {
+            background:rgba(220,50,50,0.15); border:1px solid rgba(220,50,50,0.3);
+            color:#FF8888; padding:4px 10px; border-radius:6px;
+            font-size:12px; cursor:pointer;
+        }
+        .delete-btn:hover { background:rgba(220,50,50,0.3); }
+        .lyrics-cell {
+            max-width:160px; overflow:hidden;
+            text-overflow:ellipsis; white-space:nowrap; color:#888;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Tuneify Admin 🎵 </h1>
+        <div style="display:flex;gap:12px;">
+            <a href="{{ url_for('upload') }}" class="btn btn-primary">+ Upload Song</a>
+            <a href="{{ url_for('logout') }}" class="btn btn-outline">Sign Out</a>
+        </div>
+    </header>
+
+    {% if success %}
+    <div class="success">✅ Song "{{ success }}" added successfully!</div>
+    {% endif %}
+
+    <!-- Stats -->
+    <div class="stats">
+        <div class="stat">
+            <div class="num">{{ songs|length }}</div>
+            <div class="lbl">Songs in total</div>
+        </div>
+        {% for mood, emoji in [('😊','Happy'),('😢','Sad'),('😌','Calm'),('⚡','Energetic'),('😠','Angry')] %}
+        <div class="stat">
+            <div class="num">{{ songs | selectattr(5, 'equalto', mood) | list | length }}</div>
+            <div class="lbl">{{ mood }} {{ emoji }}</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Song table -->
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Title</th>
+                    <th>Artist</th>
+                    <th>File Name</th>
+                    <th>Stream URL</th>
+                    <th>Mood</th>
+                    <th>Mood Score</th>
+                    <th>Lyrics</th>
+                    <th>Cover</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in songs %}
+                <tr>
+                    <td style="color:#666">{{ s[0] }}</td>
+                    <td><strong>{{ s[1] }}</strong></td>
+                    <td>{{ s[2] }}</td>
+                    <td style="color:#AAAACC;font-size:12px;">{{ s[3] }}</td>
+                    <td style="color:#666;font-size:11px;">{{ s[4] }}</td>
+                    <td><span class="mood-badge mood-{{ s[5] }}">{{ s[5] }}</span></td>
+                    <td>{{ "%.3f"|format(s[6]) if s[6] else "—" }}</td>
+                    <td class="lyrics-cell" title="{{ s[7] }}">
+                        {{ s[7][:40] + "…" if s[7] and s[7]|length > 40 else (s[7] or "—") }}
+                    </td>
+                    <td style="font-size:12px;color:#AAAACC;">{{ s[8] or "—" }}</td>
+                    <td>
+                        <form method="POST"
+                              action="{{ url_for('delete', song_id=s[0]) }}"
+                              onsubmit="return confirm('Delete this song?')">
+                            <button class="delete-btn" type="submit">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="10" style="text-align:center;color:#666;padding:32px;">
+                        No songs yet. Upload your first song!
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

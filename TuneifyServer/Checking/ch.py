@@ -4,14 +4,16 @@ import sqlite3
 conn = sqlite3.connect("../tuneify.db")
 cursor = conn.cursor()
 
-# You must use cursor.execute() for each SQL command
-cursor.execute("INSERT INTO playlists (name, user_id, cover_url) VALUES ('Top Pop Hits', 0, 'cover_toppophits.png')")
+# Correct SQL execution
+cursor.execute("""
+    UPDATE songs
+    SET mood = 'Angry'
+    WHERE LOWER(artist) = LOWER('Olivia Rodrigo')
+""")
 
-cursor.execute("INSERT INTO playlists (name, user_id, cover_url) VALUES ('80s Mix', 0, 'cover_80smix.png')")
-
-cursor.execute("INSERT INTO playlists (name, user_id, cover_url) VALUES ('Throwback Mix', 0, 'cover_tbmix.png')")
-
+# Save changes
 conn.commit()
 
-print("Successfully updated playlists.")
+print("good!")
+# Close connection
 conn.close()

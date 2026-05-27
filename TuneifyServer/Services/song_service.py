@@ -27,6 +27,9 @@ class SongService:
     def search_songs(self, query):
         return self.db.search_songs(query)
 
+    def get_songs_by_mood_list(self, mood: str, count: int = 3):
+        return self.db.get_songs_by_mood_list(mood, count)
+
     # Retrieves a list of songs filtered by a specific mood category (e.g., 'Happy', 'Sad')
     def get_songs_by_mood(self, mood):
         return self.db.get_songs_by_mood(mood)
