@@ -114,6 +114,18 @@ class DatabaseManager:
         finally:
             cursor.close()
 
+    def get_user_by_email(self, email):
+        cursor = self.conn.cursor()
+        try:
+            cursor.execute(
+                "SELECT id FROM users WHERE email=?",
+                (email,)
+            )
+            row = cursor.fetchone()
+            return row
+        finally:
+            cursor.close()
+
     # Updates a user field
     # Input: username, field, new value (str)
     # Output: status message (str)

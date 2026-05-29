@@ -160,7 +160,7 @@ def upload():
         if cext in ALLOWED_IMG:
             cover_name = secure_filename(cover_file.filename)
             cover_file.save(os.path.join(COVERS_DIR, cover_name))
-            cover_url = cover_name
+            cover_url = f"/TuneifyServer/song_covers/{cover_name}"
 
     # Run ML pipeline
     try:
