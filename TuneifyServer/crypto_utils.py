@@ -1,11 +1,12 @@
-"""
-crypto_utils.py (STABLE WORKING VERSION)
+#crypto_utils.py
 
-Fixes:
-✔ Stable Diffie-Hellman parameters (NO regeneration crash)
-✔ Correct AES-GCM format (nonce + ciphertext + tag)
-✔ Compatible with Android client
-✔ Clean cryptographic flow for handshake system
+"""
+Provides cryptographic utilities for secure client-server communication:
+- Password hashing
+- RSA key generation and signing
+- Diffie-Hellman key exchange
+- AES-GCM encryption/decryption
+- Session token generation
 """
 
 import os
@@ -22,16 +23,9 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.backends import default_backend
 
 
-# ─────────────────────────────────────────────
-# PEPPER (server-only secret)
-# ─────────────────────────────────────────────
 PEPPER = "TuneifySecretPepper2024!@#"
 
 
-# ─────────────────────────────────────────────
-# FIXED DH PARAMETERS (IMPORTANT)
-# Must be stable across server restarts
-# ─────────────────────────────────────────────
 _P = int(
     "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1"
     "29024E088A67CC74020BBEA63B139B22514A08798E3404DD"
@@ -46,16 +40,17 @@ _P = int(
     "15728E5A8AACAA68FFFFFFFFFFFFFFFF",
     16
 )
+
 _G = 2
 
 DH_PARAMETERS = DHParameterNumbers(_P, _G).parameters(default_backend())
 
 
-# ════════════════════════════════════════
-# PASSWORD SECURITY
-# ════════════════════════════════════════
+# Input: password (str)
+# Output: hashed password (str), salt (str) -> tuple[str, str]
+# Uses PBKDF2 with SHA-256 + server pepper for secure password storage
 
-def hash_password(password: str):
+def hash_password(password: str) -> tuple[str, str]:
     salt = secrets.token_bytes(16)
     salted = (password + PEPPER).encode()
 
@@ -68,6 +63,9 @@ def hash_password(password: str):
 
     return hashed.hex(), salt.hex()
 
+
+# Input: password (str), stored_hash (str), stored_salt (str)
+# Output: True if password matches stored hash -> bool
 
 def verify_password(password: str, stored_hash: str, stored_salt: str) -> bool:
     salt = bytes.fromhex(stored_salt)
@@ -83,11 +81,10 @@ def verify_password(password: str, stored_hash: str, stored_salt: str) -> bool:
     return secrets.compare_digest(candidate.hex(), stored_hash)
 
 
-# ════════════════════════════════════════
-# RSA KEY MANAGEMENT
-# ════════════════════════════════════════
+# Input: None
+# Output: creates RSA key pair files -> None
 
-def generate_rsa_keys():
+def generate_rsa_keys() -> None:
     os.makedirs("keys", exist_ok=True)
 
     key = rsa.generate_private_key(
@@ -110,6 +107,9 @@ def generate_rsa_keys():
         ))
 
 
+# Input: None
+# Output: RSA private key object
+
 def load_rsa_private_key():
     with open("keys/server_private.pem", "rb") as f:
         return serialization.load_pem_private_key(
@@ -119,21 +119,32 @@ def load_rsa_private_key():
         )
 
 
-def get_public_key_pem():
+# Input: None
+# Output: RSA public key PEM string -> str
+
+def get_public_key_pem() -> str:
     with open("keys/server_public.pem", "rb") as f:
         return f.read().decode()
 
+
+# Input: data (bytes), private_key
+# Output: RSA signature (base64 string) -> str
+# Signs data to prevent MITM attacks during DH exchange
 
 def rsa_sign(data: bytes, private_key) -> str:
     signature = private_key.sign(
         data,
         padding.PSS(
             mgf=padding.MGF1(hashes.SHA256()),
-            salt_length=32  # match SHA-256 digest size, which Android expects by default
+            salt_length=32
         ),
         hashes.SHA256()
     )
     return base64.b64encode(signature).decode()
+
+
+# Input: data (bytes), signature (str), public_key
+# Output: True if signature is valid -> bool
 
 def rsa_verify(data: bytes, signature_b64: str, public_key) -> bool:
     try:
@@ -151,9 +162,9 @@ def rsa_verify(data: bytes, signature_b64: str, public_key) -> bool:
         return False
 
 
-# ════════════════════════════════════════
-# DIFFIE-HELLMAN
-# ════════════════════════════════════════
+# Input: None
+# Output: (private_key, public_key_b64) -> tuple
+# Generates ephemeral DH keypair per session for forward secrecy
 
 def generate_dh_keypair():
     private_key = DH_PARAMETERS.generate_private_key()
@@ -166,22 +177,28 @@ def generate_dh_keypair():
     return private_key, base64.b64encode(public_key).decode()
 
 
+# Input: private_key, peer_public_b64 (str)
+# Output: shared secret (bytes) -> bytes
+# Performs Diffie-Hellman key exchange
+
 def compute_dh_shared_secret(private_key, peer_public_b64: str):
     peer_der = base64.b64decode(peer_public_b64)
-
-    # Android sends DER-encoded public key (via keyPair.public.encoded)
-    # NOT a PEM file — so use load_der_public_key, not load_pem_public_key
     peer_key = load_der_public_key(peer_der)
 
     return private_key.exchange(peer_key)
+
+
+# Input: shared_secret (bytes)
+# Output: AES-256 key (bytes) -> bytes
+# Hashes shared secret to fixed-length encryption key
 
 def derive_aes_key(shared_secret: bytes) -> bytes:
     return hashlib.sha256(shared_secret).digest()
 
 
-# ════════════════════════════════════════
-# AES-GCM (FIXED + COMPATIBLE WITH ANDROID)
-# ════════════════════════════════════════
+# Input: plaintext (str), key (bytes)
+# Output: encrypted data dict -> dict
+# Uses AES-GCM for authenticated encryption
 
 def aes_encrypt(plaintext: str, key: bytes) -> dict:
     aesgcm = AESGCM(key)
@@ -189,29 +206,29 @@ def aes_encrypt(plaintext: str, key: bytes) -> dict:
     ciphertext_with_tag = aesgcm.encrypt(nonce, plaintext.encode("utf-8"), None)
 
     return {
-        "nonce":      base64.b64encode(nonce).decode(),
+        "nonce": base64.b64encode(nonce).decode(),
         "ciphertext": base64.b64encode(ciphertext_with_tag).decode()
-        # NO "tag" field — tag is already appended inside ciphertext_with_tag
     }
+
+
+# Input: encrypted dict, key (bytes)
+# Output: decrypted plaintext (str) -> str
 
 def aes_decrypt(data: dict, key: bytes) -> str:
     aesgcm = AESGCM(key)
-    nonce      = base64.b64decode(data["nonce"])
+    nonce = base64.b64decode(data["nonce"])
     ciphertext = base64.b64decode(data["ciphertext"])
     return aesgcm.decrypt(nonce, ciphertext, None).decode("utf-8")
-# ════════════════════════════════════════
-# SESSION TOKENS
-# ════════════════════════════════════════
 
-def generate_session_token():
+
+# Input: None
+# Output: session token (str) -> str
+
+def generate_session_token() -> str:
     return secrets.token_hex(32)
 
-
-# ════════════════════════════════════════
-# AUTO-RUN KEY GENERATION
-# ════════════════════════════════════════
 
 if __name__ == "__main__":
     print("Generating RSA keys...")
     generate_rsa_keys()
-    print("DONE → keys/server_private.pem created")
+    print("DONE → keys created")

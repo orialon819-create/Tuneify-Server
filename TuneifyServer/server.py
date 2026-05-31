@@ -1,6 +1,6 @@
-"""
-server.py
+# server.py
 
+"""
 This is the main server module. It initializes the DatabaseManager,
 creates Service objects, sets up the Dispatcher, and listens for client
 connections. Each client is handled in a separate ClientHandler thread.
@@ -68,7 +68,6 @@ print(f"Server listening on {HOST}:{PORT}")
 
 
 # MAIN SERVER LOOP
-
 # Continuously accepts new client connections
 # Input: None
 # Output: client threads

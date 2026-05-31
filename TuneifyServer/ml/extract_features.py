@@ -1,55 +1,50 @@
-import librosa        # the audio analysis library
-import numpy as np    # for working with arrays of numbers
-import pandas as pd   # for working with the CSV
+# extract_features.py
+
+import librosa
+import numpy as np
+import pandas as pd
 import os
 
-def extract_features(file_path):
-    """
-    Takes the path to a .wav file.
-    Returns a list of ~22 numbers describing that song.
-    """
+# Input:
+# file_path (str) – Path to a .wav audio file.
+# Output:
+# Returns a list of numerical audio features (~23 values)
+# representing MFCCs, tempo, energy, and spectral centroid.
 
-    # Step 1: Load the audio file
-    # y = the actual sound data (a long array of numbers)
-    # sr = sample rate (how many samples per second, usually 22050)
-    y, sr = librosa.load(file_path, duration=30)  # only use first 30 seconds
+def extract_features(file_path: str) -> list[float]:
 
-    # Step 2: Extract MFCCs
-    # This gives us a 2D array: 20 rows (one per coefficient) x ~1300 columns (one per time frame)
-    # We take the MEAN of each row to get a single number per coefficient
-    # Result: 20 numbers
+    # Load audio file (only first 30 seconds for consistency)
+    y, sr = librosa.load(file_path, duration=30)
+
+    # Extract MFCC features (20 coefficients)
     mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=20)
-    mfcc_means = np.mean(mfccs, axis=1)   # axis=1 means "average across time"
+    mfcc_means = np.mean(mfccs, axis=1)
 
-    # Step 3: Extract Tempo
-    # Returns the BPM as a single number
+    # Extract tempo (BPM estimation)
     tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
-    # tempo comes back as an array in newer librosa, so we grab the first element
     tempo_value = float(np.atleast_1d(tempo)[0])
 
-    # Step 4: Extract Energy (RMS)
-    # rms gives a 2D array, we take the mean to get 1 number
+    # Extract RMS energy (loudness indicator)
     rms = librosa.feature.rms(y=y)
     energy = float(np.mean(rms))
 
-    # Step 5: Extract Spectral Centroid
-    # Same pattern — 2D array, take the mean
+    # Extract spectral centroid (brightness of sound)
     centroid = librosa.feature.spectral_centroid(y=y, sr=sr)
     centroid_mean = float(np.mean(centroid))
 
-    # Combine everything into one flat list of numbers
-    # mfcc_means is already an array of 20 numbers
-    # we add tempo, energy, centroid as individual numbers
+    # Combine all extracted features into a single vector
     features = list(mfcc_means) + [tempo_value, energy, centroid_mean]
-    # Total: 23 numbers
 
     return features
 
 
-# --- Now run this on every song in our dataset ---
+# Input:
+# None (runs only when script is executed directly)
+# Output:
+# Generates features.csv containing extracted audio features
+# for all songs listed in mood_labels.csv.
 
 if __name__ == "__main__":
-    # --- Now run this on every song in our dataset ---
 
     df = pd.read_csv('mood_labels.csv')
 
@@ -59,6 +54,7 @@ if __name__ == "__main__":
         file_path = row['filename']
         mood = row['mood']
         print(f"Processing {file_path}...")
+
         try:
             features = extract_features(file_path)
             all_features.append(features + [mood])
@@ -67,5 +63,7 @@ if __name__ == "__main__":
 
     columns = [f'mfcc_{i}' for i in range(20)] + ['tempo', 'energy', 'centroid', 'mood']
     features_df = pd.DataFrame(all_features, columns=columns)
+
     features_df.to_csv('features.csv', index=False)
+
     print(f"\nDone! {len(features_df)} songs saved to features.csv")

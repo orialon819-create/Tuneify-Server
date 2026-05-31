@@ -1,5 +1,6 @@
+#predict.py
+
 """
-predict.py
 Used by admin_app.py to run the ML pipeline on a new song.
 Place this file inside the ml/ folder.
 """
@@ -8,20 +9,23 @@ import joblib
 import numpy as np
 import os
 
-# Load model and encoder — paths relative to this file's location
+# Load model and encoder
 _dir     = os.path.dirname(__file__)
 _model   = joblib.load(os.path.join(_dir, "mood_model.pkl"))
 _encoder = joblib.load(os.path.join(_dir, "label_encoder.pkl"))
 
-# Import extract_features from your existing extract_features.py
+# Import extract_features existing extract_features.py
 from ml.extract_features import extract_features
 
 
-def predict_mood(file_path: str):
-    """
-    Runs the full ML pipeline on an audio file.
-    Returns: (mood_label, confidence_float, feature_summary_dict, all_probs_dict)
-    """
+# Input:
+# file_path (str) – Path to an audio (.wav) file.
+# Output:
+# Returns a tuple containing:
+# (predicted_mood_label, confidence_score, feature_summary_dict, mood_probabilities_dict)
+
+def predict_mood(file_path: str) -> tuple[str, float, dict, dict]:
+
     features      = extract_features(file_path)
     arr           = np.array(features).reshape(1, -1)
 

@@ -1,6 +1,6 @@
-"""
-admin_app.py
+# admin_app.py
 
+"""
 Flask admin panel for Tuneify.
 Admin uploads an audio file + metadata.
 ML pipeline runs automatically to predict mood + confidence.
@@ -15,7 +15,7 @@ import os
 app = Flask(__name__)
 app.secret_key = "tuneify_admin_secret_2024"
 
-# ── Config ────────────────────────────────────────────────────────────────────
+# Config
 DB_PATH       = "tuneify.db"
 MUSIC_DIR     = "./music_library"
 COVERS_DIR    = "./song_covers"
@@ -29,13 +29,13 @@ os.makedirs(COVERS_DIR, exist_ok=True)
 
 ADMINS = {"admin": "tuneify26"}
 
-
 from ml.predict import predict_mood
 
 
-# ── DB Helpers ────────────────────────────────────────────────────────────────
+# Input: None
+# Output: returns all songs from database
 
-def get_all_songs():
+def get_all_songs() -> list:
     conn = sqlite3.connect(DB_PATH)
     cur  = conn.cursor()
     try:
@@ -49,8 +49,11 @@ def get_all_songs():
         cur.close(); conn.close()
 
 
+# Input: title, artist, file_name, stream_url, mood, mood_score, lyrics, cover_url
+# Output: inserts song into database and returns inserted id
+
 def insert_song(title, artist, file_name, stream_url,
-                mood, mood_score, lyrics, cover_url):
+                mood, mood_score, lyrics, cover_url) -> int:
     conn = sqlite3.connect(DB_PATH)
     cur  = conn.cursor()
     try:
@@ -66,7 +69,10 @@ def insert_song(title, artist, file_name, stream_url,
         cur.close(); conn.close()
 
 
-def delete_song(song_id: int):
+# Input: song_id (int)
+# Output: deletes song from database
+
+def delete_song(song_id: int) -> None:
     conn = sqlite3.connect(DB_PATH)
     cur  = conn.cursor()
     try:
@@ -76,12 +82,16 @@ def delete_song(song_id: int):
         cur.close(); conn.close()
 
 
-# ── Auth ──────────────────────────────────────────────────────────────────────
+# Input: None
+# Output: redirects to dashboard or login page
 
 @app.route("/")
 def index():
     return redirect(url_for("dashboard") if "admin" in session else url_for("login"))
 
+
+# Input: username, password
+# Output: logs admin in or returns error page
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -94,13 +104,17 @@ def login():
     return render_template("login.html", error=error)
 
 
+# Input: None
+# Output: logs admin out
+
 @app.route("/logout")
 def logout():
     session.pop("admin", None)
     return redirect(url_for("login"))
 
 
-# ── Dashboard ─────────────────────────────────────────────────────────────────
+# Input: None
+# Output: displays dashboard page with songs
 
 @app.route("/dashboard")
 def dashboard():
@@ -111,6 +125,9 @@ def dashboard():
                            success=request.args.get("success"))
 
 
+# Input: song_id (int)
+# Output: deletes song and redirects
+
 @app.route("/delete/<int:song_id>", methods=["POST"])
 def delete(song_id):
     if "admin" not in session:
@@ -119,7 +136,8 @@ def delete(song_id):
     return redirect(url_for("dashboard"))
 
 
-# ── Upload ────────────────────────────────────────────────────────────────────
+# Input: title, artist, lyrics, audio file, optional cover file
+# Output: uploads song, runs ML prediction, saves to DB, returns result page
 
 @app.route("/upload", methods=["GET", "POST"])
 def upload():
@@ -129,7 +147,6 @@ def upload():
     if request.method == "GET":
         return render_template("upload.html")
 
-    # Form fields
     title  = request.form.get("title",  "").strip()
     artist = request.form.get("artist", "").strip()
     lyrics = request.form.get("lyrics", "").strip()
@@ -138,10 +155,10 @@ def upload():
         return render_template("upload.html",
                                error="Title and artist are required.")
 
-    # Audio file
     audio_file = request.files.get("audio")
     if not audio_file or audio_file.filename == "":
         return render_template("upload.html", error="Please upload an audio file.")
+
     ext = audio_file.filename.rsplit(".", 1)[-1].lower()
     if ext not in ALLOWED_AUDIO:
         return render_template("upload.html",
@@ -152,7 +169,6 @@ def upload():
     audio_file.save(audio_path)
     stream_url = f"/TuneifyServer/music_library/{file_name}"
 
-    # Cover image (optional — last field)
     cover_url  = ""
     cover_file = request.files.get("cover")
     if cover_file and cover_file.filename != "":
@@ -162,14 +178,12 @@ def upload():
             cover_file.save(os.path.join(COVERS_DIR, cover_name))
             cover_url = f"/TuneifyServer/song_covers/{cover_name}"
 
-    # Run ML pipeline
     try:
         mood, confidence, features, all_probs = predict_mood(audio_path)
     except Exception as e:
         print(f"ML error: {e}")
         mood, confidence, features, all_probs = "Unknown", 0.0, {}, {}
 
-    # Save to DB
     song_id = insert_song(
         title      = title,
         artist     = artist,
