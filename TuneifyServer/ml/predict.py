@@ -2,7 +2,6 @@
 
 """
 Used by admin_app.py to run the ML pipeline on a new song.
-Place this file inside the ml/ folder.
 """
 
 import joblib

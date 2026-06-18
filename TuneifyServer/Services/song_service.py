@@ -36,11 +36,11 @@ class SongService:
     # Input: mood (str), count (int)
     # Output: Returns list of songs filtered by mood (limited count)
 
-    def get_songs_by_mood_list(self, mood: str, count: int = 3) -> list:
+    def get_songs_by_mood_list(self, mood: str, count: int = 5) -> list:
         return self.db.get_songs_by_mood_list(mood, count)
 
     # Input: mood (str)
-    # Output: Returns list of songs matching the given mood
+    # Output: Returns single song
 
-    def get_songs_by_mood(self, mood) -> list:
-        return self.db.get_songs_by_mood(mood)
+    def get_song_by_mood(self, mood) -> str:
+        return self.db.get_song_by_mood(mood)

@@ -230,7 +230,7 @@ class DatabaseManager:
     # Input: mood (str), count (int)
     # Output: "OK|[songs_json]" or "ERROR|No songs found"
     # Returns random songs matching a mood
-    def get_songs_by_mood_list(self, mood: str, count: int = 3) -> str:
+    def get_songs_by_mood_list(self, mood: str, count: int = 5) -> str:
         cursor = self.conn.cursor()
         try:
             cursor.execute("""
@@ -259,17 +259,19 @@ class DatabaseManager:
     # Input: mood (str)
     # Output: "OK|stream_url" or "ERROR|No song found"
     # Returns a single song stream URL for a mood
-    def get_songs_by_mood(self, mood) -> str:
+    def get_song_by_mood(self, mood:str) -> str:
         cursor = self.conn.cursor()
         try:
-            cursor.execute(
-                "SELECT stream_url FROM songs WHERE mood=? LIMIT 1",
-                (mood,)
-            )
+            cursor.execute("""
+                   SELECT id, title, artist, cover_url, stream_url
+                   FROM songs
+                   WHERE mood = ?
+                   ORDER BY RANDOM()
+                   LIMIT 1
+               """, (mood,))
 
             row = cursor.fetchone()
             return f"OK|{row[0]}" if row else "ERROR|No song found"
-
         finally:
             cursor.close()
 
@@ -478,6 +480,38 @@ class DatabaseManager:
         finally:
             cursor.close()
 
+# Input: user_id (int)
+# Output: "OK|playlist_id" or "ERROR|..."
+# Gets or creates a "Liked Songs" playlist for a user
+
+def get_or_create_liked_songs_playlist(self, user_id) -> str:
+    cursor = self.conn.cursor()
+    try:
+        cursor.execute("""
+                        SELECT id FROM playlists 
+                        WHERE user_id=? AND name='Liked Songs' 
+                        ORDER BY id ASC
+                    """, (user_id,))
+        row = cursor.fetchone()
+        if row:
+             return f"OK|{row[0]}"
+        cover_filename = "liked_songs_cover.png"
+
+        cursor.execute("""
+            INSERT INTO playlists (name, user_id, cover_url)
+            VALUES ('Liked Songs', ?, ?)
+        """, (user_id, cover_filename))
+
+        self.conn.commit()
+        return f"OK|{cursor.lastrowid}"
+    except Exception as e:
+        return f"ERROR|{e}"
+
+    finally:
+        cursor.close()
+
+
+
     # Input: user_id (int)
     # Output: "OK|[playlists_json]"
     # Returns recommended playlists for user
@@ -502,37 +536,6 @@ class DatabaseManager:
         finally:
             cursor.close()
 
-    # Input: user_id (int)
-    # Output: "OK|playlist_id" or "ERROR|..."
-    # Gets or creates a "Liked Songs" playlist for a user
-    def get_or_create_liked_songs_playlist(self, user_id) -> str:
-        cursor = self.conn.cursor()
-        try:
-            cursor.execute(
-                "SELECT id FROM playlists WHERE user_id=? AND name='Liked Songs'",
-                (user_id,)
-            )
-
-            row = cursor.fetchone()
-
-            if row:
-                return f"OK|{row[0]}"
-
-            cover_filename = "liked_songs_cover.png"
-
-            cursor.execute("""
-                INSERT INTO playlists (name, user_id, cover_url)
-                VALUES ('Liked Songs', ?, ?)
-            """, (user_id, cover_filename))
-
-            self.conn.commit()
-            return f"OK|{cursor.lastrowid}"
-
-        except Exception as e:
-            return f"ERROR|{e}"
-
-        finally:
-            cursor.close()
 
     # Input: None
     # Output: None

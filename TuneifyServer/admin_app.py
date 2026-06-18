@@ -167,16 +167,17 @@ def upload():
     file_name  = secure_filename(audio_file.filename)
     audio_path = os.path.join(MUSIC_DIR, file_name)
     audio_file.save(audio_path)
-    stream_url = f"/TuneifyServer/music_library/{file_name}"
+    stream_url = file_name
 
-    cover_url  = ""
+    cover_url = ""
     cover_file = request.files.get("cover")
     if cover_file and cover_file.filename != "":
         cext = cover_file.filename.rsplit(".", 1)[-1].lower()
         if cext in ALLOWED_IMG:
             cover_name = secure_filename(cover_file.filename)
             cover_file.save(os.path.join(COVERS_DIR, cover_name))
-            cover_url = f"/TuneifyServer/song_covers/{cover_name}"
+
+            cover_url = cover_name
 
     try:
         mood, confidence, features, all_probs = predict_mood(audio_path)

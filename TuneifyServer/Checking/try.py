@@ -1,31 +1,41 @@
 import sqlite3
 
-# Connect to DB
-conn = sqlite3.connect("../tuneify.db")
-cursor = conn.cursor()
 
-# ---- SONG INFO ----
-FILE_NAME = "energetic1.mp3"
-MOOD = "Energetic"
 
-# This is the IMPORTANT part:
-# Path relative to the HTTP server root
-STREAM_PATH = "/TuneifyServer/music_library/" + FILE_NAME
+def remove_duplicate_liked_playlists():
+    conn = sqlite3.connect("../tuneify.db")
+    cursor = conn.cursor()
+    try:
+        # 1. מוצאים את ה-ID של פלייליסט הלייקים הראשון (החוקי) עבור משתמש 6
+        cursor.execute("""
+            SELECT MIN(id) FROM playlists 
+            WHERE user_id = 6 AND name = 'Liked Songs'
+        """)
+        original_id = cursor.fetchone()[0]
 
-cursor.execute("""
-    INSERT INTO songs (title, artist, file_name, stream_url, mood, mood_score, lyrics)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-""", (
-    FILE_NAME.replace(".mp3", ""),
-    "Copyright Free",
-    FILE_NAME,
-    STREAM_PATH,
-    MOOD,
-    0.9,
-    "Instrumental"
-))
+        if not original_id:
+            print("לא נמצאו פלייליסטים של Liked Songs עבור משתמש 6.")
+            return
 
-conn.commit()
-conn.close()
+        print(f"הפלייליסט המקורי שיישמר הוא ID: {original_id}")
 
-print("Song inserted correctly (IP-independent) 🎵")
+        # 2. מוחקים את כל שאר פלייליסטי ה-Liked Songs של משתמש 6 שה-ID שלהם גדול יותר מהמקורי
+        cursor.execute("""
+            DELETE FROM playlists 
+            WHERE user_id = 6 AND name = 'Liked Songs' AND id > ?
+        """, (original_id,))
+
+        deleted_count = cursor.rowcount
+        conn.commit()
+
+        print(f"הניקוי בוצע בהצלחה! נמחקו {deleted_count} פלייליסטים משוכפלים.")
+
+    except Exception as e:
+        print(f"שגיאה בזמן המחיקה: {e}")
+    finally:
+        cursor.close()
+        conn.close()
+
+
+if __name__ == "__main__":
+    remove_duplicate_liked_playlists()

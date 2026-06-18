@@ -231,4 +231,4 @@ def generate_session_token() -> str:
 if __name__ == "__main__":
     print("Generating RSA keys...")
     generate_rsa_keys()
-    print("DONE → keys created")
+    print("DONE - keys created")

@@ -4,19 +4,13 @@ import sqlite3
 conn = sqlite3.connect("../tuneify.db")
 cursor = conn.cursor()
 
-song_ids = [12, 14, 17, 18, 20]
-playlist_id = 12
+# 2. Execute the DELETE statement as a string
+cursor.execute("DELETE FROM playlists WHERE id = 17;")
 
-for song_id in song_ids:
-    cursor.execute("""
-        INSERT INTO playlist_songs (playlist_id, song_id)
-        VALUES (?, ?)
-    """, (playlist_id, song_id))
-
-# CRITICAL: Save the changes!
+# 3. CRITICAL: Save the changes!
 conn.commit()
 
-# 6. Close the connection
+# 4. Close the connection
 conn.close()
 
-print(f"Added songs {song_ids} to playlist {playlist_id} successfully.")
+print("Successfully deleted songs with IDs from 28 to 39.")

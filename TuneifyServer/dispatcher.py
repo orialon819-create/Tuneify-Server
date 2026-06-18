@@ -81,10 +81,10 @@ class Dispatcher:
         # Gets one song by mood
         # Input: mood (str)
         # Output: stream URL or error string
-        elif command == "GET_SONGS_BY_MOOD":
+        elif command == "GET_SONG_BY_MOOD":
             mood = params.get("mood", "Happy")
             try:
-                url = self.song_service.handle_get_song(mood)
+                url = self.song_service.get_song_by_mood(mood)
                 return f"OK|{url}" if url else "ERROR|No song found"
             except Exception as e:
                 return f"ERROR|{e}"
@@ -128,7 +128,7 @@ class Dispatcher:
         # Output: JSON songs
         elif command == "GET_SONGS_BY_MOOD_LIST":
             mood = params.get("mood", "Happy")
-            count = int(params.get("count", 3))
+            count = int(params.get("count", 5))
             return self.song_service.get_songs_by_mood_list(mood, count)
 
         # Gets number of songs in playlist
